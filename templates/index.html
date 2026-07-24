@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PP-OCRv6 Local API</title>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}" />
+  </head>
+  <body>
+    <header class="navbar">
+      <div class="container nav-content">
+        <div class="logo">
+          <div class="logo-icon">OCR</div>
+          <span>PP-OCRv6 Local API</span>
+        </div>
+
+        <nav>
+          <a href="#features">Features</a>
+          <a href="#upload">Upload</a>
+          <a href="https://github.com/PaddlePaddle/PaddleOCR" target="_blank">
+            PaddleOCR
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <span class="badge"> Local • FastAPI • PaddleOCR </span>
+
+          <h1>
+            High Accuracy
+            <span>Local OCR</span>
+            Powered by PP-OCRv6
+          </h1>
+
+          <p>
+            Extract text from images completely offline using PaddleOCR. Upload
+            documents, invoices, IDs, forms or screenshots and instantly receive
+            recognized text along with structured JSON output.
+          </p>
+
+          <div class="hero-buttons">
+            <a href="#upload" class="btn primary">Try OCR</a>
+            <a href="/docs" target="_blank" class="btn secondary">API Docs</a>
+          </div>
+
+          <div class="stats">
+            <div>
+              <h3>FastAPI</h3>
+              <p>Backend</p>
+            </div>
+            <div>
+              <h3>PP-OCRv6</h3>
+              <p>Recognition</p>
+            </div>
+            <div>
+              <h3>JSON</h3>
+              <p>Structured Output</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-card" id="upload">
+          <div class="card-header">
+            <h2>Upload Image</h2>
+            <p>Select an image and extract text.</p>
+          </div>
+
+          <form id="uploadForm">
+            <label class="upload-box">
+              <input type="file" id="fileInput" accept="image/*" required />
+
+              <div class="upload-content">
+                <div class="upload-icon">📄</div>
+                <h3>Choose Image</h3>
+                <p>PNG, JPG, JPEG, WEBP</p>
+              </div>
+            </label>
+
+            <button class="submit-btn" type="submit">Run OCR</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="features" id="features">
+      <div class="container">
+        <h2>Why Use This API?</h2>
+
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h3>⚡ Local Processing</h3>
+            <p>No cloud dependency. Images stay on your machine.</p>
+          </div>
+
+          <div class="feature-card">
+            <h3>📑 Structured Output</h3>
+            <p>Receive extracted text, JSON files and annotated images.</p>
+          </div>
+
+          <div class="feature-card">
+            <h3>🚀 FastAPI Ready</h3>
+            <p>Lightweight REST API for automation and integration.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="result-section" id="resultContainer">
+      <div class="container">
+        <div class="result-card">
+          <div class="result-header">
+            <h2>OCR Result</h2>
+            <span id="status" class="status-badge">Ready</span>
+          </div>
+
+          <!-- Dynamic UI Container -->
+          <div id="resultOutput" class="result-output-wrapper">
+            <p class="placeholder-text">
+              Upload an image above and click "Run OCR" to see extracted text
+              here...
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="enhance-section" id="enhance">
+      <div class="container">
+        <div class="hero-card">
+          <div class="card-header">
+            <h2>Image Enhancement</h2>
+            <p>Enhance images before OCR using OpenCV.</p>
+          </div>
+
+          <form id="enhanceForm">
+            <label class="upload-box">
+              <input type="file" id="enhanceInput" accept="image/*" required />
+
+              <div class="upload-content">
+                <div class="upload-icon">🖼️</div>
+                <h3>Choose Image</h3>
+                <p>PNG JPG JPEG WEBP</p>
+              </div>
+            </label>
+
+            <button class="submit-btn" type="submit">Enhance Image</button>
+          </form>
+        </div>
+      </div>
+    </section>
+    <section class="result-section">
+      <div class="container">
+        <div class="result-card">
+          <h2>Enhanced Result</h2>
+
+          <div id="enhanceResult">
+            <p>Upload image to begin.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <script>
+        
+      const form = document.getElementById("uploadForm");
+      const resultOutput = document.getElementById("resultOutput");
+      const status = document.getElementById("status");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const fileInput = document.getElementById("fileInput");
+        const file = fileInput.files[0];
+
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        status.textContent = "Processing...";
+        status.className = "status-badge processing";
+
+        resultOutput.innerHTML = `
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Running OCR extraction model, please wait...</p>
+        </div>
+    `;
+
+        try {
+          const response = await fetch("/ocr", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            status.textContent = "Completed";
+            status.className = "status-badge success";
+
+            const extractedLines = data.text ? data.text.split("\n") : [];
+            const formattedTextList =
+              extractedLines.length > 0
+                ? extractedLines.map((line) => `<li>${line}</li>`).join("")
+                : `<li class="empty-line">No text detected in image.</li>`;
+
+            resultOutput.innerHTML = `
+                <div class="meta-bar">
+                    <span class="meta-item"><strong>Lines Detected:</strong> ${data.total_lines}</span>
+                    <span class="meta-item"><strong>Status:</strong> Success</span>
+                </div>
+
+                <div class="text-results">
+                    <h3>Extracted Text:</h3>
+                    <ul class="text-list">
+                        ${formattedTextList}
+                    </ul>
+                </div>
+
+                <div class="raw-response">
+                    <details>
+                        <summary>View Raw Text Payload</summary>
+                        <textarea readonly class="text-area-view">${data.text}</textarea>
+                    </details>
+                </div>
+            `;
+          } else {
+            throw new Error(data.error || "OCR Extraction Failed");
+          }
+        } catch (err) {
+          status.textContent = "Failed";
+          status.className = "status-badge error";
+
+          resultOutput.innerHTML = `
+            <div class="error-box">
+                <h4>Error Occurred</h4>
+                <p>${err.message || err}</p>
+            </div>
+        `;
+        }
+      });
+
+      const enhanceForm = document.getElementById("enhanceForm");
+      const enhanceResult = document.getElementById("enhanceResult");
+
+      function clamp(value, min = 0, max = 255) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function loadImage(file) {
+        return new Promise((resolve, reject) => {
+          const imageUrl = URL.createObjectURL(file);
+          const img = new Image();
+
+          img.onload = () => {
+            URL.revokeObjectURL(imageUrl);
+            resolve(img);
+          };
+
+          img.onerror = () => {
+            URL.revokeObjectURL(imageUrl);
+            reject(new Error("Unable to read the selected image."));
+          };
+
+          img.src = imageUrl;
+        });
+      }
+
+      async function buildEnhancedPreview(file) {
+        const img = await loadImage(file);
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imageData.data;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+          const r = pixels[i];
+          const g = pixels[i + 1];
+          const b = pixels[i + 2];
+
+          const contrast = 1.25;
+          const brightness = 10;
+
+          pixels[i] = clamp((r - 128) * contrast + 128 + brightness);
+          pixels[i + 1] = clamp((g - 128) * contrast + 128 + brightness);
+          pixels[i + 2] = clamp((b - 128) * contrast + 128 + brightness);
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+
+        return canvas.toDataURL("image/png");
+      }
+
+      enhanceForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const file = document.getElementById("enhanceInput").files[0];
+
+        if (!file) {
+          enhanceResult.innerHTML = `
+            <div class="error-box">
+              <h4>No Image Selected</h4>
+              <p>Please choose an image before enhancing.</p>
+            </div>
+          `;
+          return;
+        }
+
+        enhanceResult.innerHTML = `
+          <div class="enhance-loading">
+            <div class="spinner"></div>
+            <p>Enhancing image and preparing compare preview...</p>
+          </div>
+        `;
+
+        try {
+          const originalPreview = URL.createObjectURL(file);
+          const enhancedPreview = await buildEnhancedPreview(file);
+
+          enhanceResult.innerHTML = `
+            <div class="compare-grid">
+              <div class="compare-card">
+                <h3>Original</h3>
+                <img src="${originalPreview}" class="preview-image" alt="Original preview" />
+              </div>
+
+              <div class="compare-card">
+                <h3>Enhanced</h3>
+                <img src="${enhancedPreview}" class="preview-image" alt="Enhanced preview" />
+              </div>
+            </div>
+
+            <div class="actions">
+              <a href="${enhancedPreview}" download="enhanced-image.png" class="action-btn download">Download Enhanced Image</a>
+            </div>
+          `;
+        } catch (err) {
+          enhanceResult.innerHTML = `
+            <div class="error-box">
+              <h4>Enhancement Failed</h4>
+              <p>${err.message || err}</p>
+            </div>
+          `;
+        }
+      });
+    </script>
+  </body>
+</html>
